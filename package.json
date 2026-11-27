@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "node scripts/build.mjs",
     "dev": "next dev --webpack --hostname 127.0.0.1 --port 4173",
     "start": "next start",
     "preview": "next start --hostname 127.0.0.1 --port 4173",

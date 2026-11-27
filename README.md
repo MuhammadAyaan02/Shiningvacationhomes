@@ -8,11 +8,11 @@ Requires Node.js 20.9+ (Cloudflare builds use Node 24). Copy `.env.example` to `
 
 ```sh
 npm ci
-npm run build
+npm run build:next
 npm run preview
 ```
 
-Preview: http://127.0.0.1:4173/. Use `npm run dev` for hot reload. Run only one server on that port.
+Preview: http://127.0.0.1:4173/. Use `npm run dev` for hot reload. Run only one server on that port. For a Cloudflare worker preview, use `npm run cf:preview`.
 
 ## Cloudflare Workers settings
 
@@ -20,11 +20,11 @@ Connect the GitHub repo in Cloudflare Workers/Pages and set:
 
 | Setting | Value |
 |---|---|
-| Build command | `npm run cf:build` |
+| Build command | `npm run build` |
 | Deploy command | `npx wrangler deploy` |
 | Root directory | `/` (repo root) |
 
-Use the same production environment variables as Vercel below, including `ENQUIRY_DATABASE_URL` and `ENQUIRY_DATA_KEY`. Cloudflare has no persistent local disk, so PostgreSQL is required for enquiry storage. Optional local check: `npm run cf:preview`.
+`npm run build` runs the OpenNext Cloudflare worker bundle (Next build lives in `npm run build:next`). Use the same production environment variables as Vercel below, including `ENQUIRY_DATABASE_URL` and `ENQUIRY_DATA_KEY`. Cloudflare has no persistent local disk, so PostgreSQL is required for enquiry storage. Optional local check: `npm run cf:preview`.
 
 ## Vercel production settings
 
@@ -41,9 +41,9 @@ Set these values directly in the project's Production environment settings:
 | `ENQUIRY_DATABASE_URL` | Managed PostgreSQL connection URL |
 | `ENQUIRY_DATA_KEY` | Stable private 64-character hexadecimal encryption key |
 
-Vercel uses `npm run check:release && npm run build`. Keep its output directory at the Next.js default. Missing production settings intentionally block release. Without `ENQUIRY_PROVIDER=gmail`, the supported legacy default checks for Resend settings instead; see `.env.example` for that alternative.
+Vercel uses `npm run check:release && npm run build:next`. Keep its output directory at the Next.js default. Missing production settings intentionally block release. Without `ENQUIRY_PROVIDER=gmail`, the supported legacy default checks for Resend settings instead; see `.env.example` for that alternative.
 
-Always use `npm run build`: it validates the prerendered files and generates the script-hash security policy. The build supports standalone and Vercel adapter layouts. For a conventional Node host, run `npm start` behind HTTPS with persistent storage configured.
+Always use `npm run build:next` for a plain Next.js output: it validates the prerendered files and generates the script-hash security policy. Use `npm run build` when you need the Cloudflare worker bundle. For a conventional Node host, run `npm start` behind HTTPS with persistent storage configured.
 
 ## Operations
 
