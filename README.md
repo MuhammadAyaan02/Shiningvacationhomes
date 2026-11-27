@@ -4,7 +4,7 @@ Next.js App Router and React website for Dubai accommodation and property-manage
 
 ## Local setup
 
-Requires Node.js 26.x. Copy `.env.example` to `.env.local`, then configure the private email settings.
+Requires Node.js 20.9+ (Cloudflare builds use Node 24). Copy `.env.example` to `.env.local`, then configure the private email settings.
 
 ```sh
 npm ci
@@ -13,6 +13,18 @@ npm run preview
 ```
 
 Preview: http://127.0.0.1:4173/. Use `npm run dev` for hot reload. Run only one server on that port.
+
+## Cloudflare Workers settings
+
+Connect the GitHub repo in Cloudflare Workers/Pages and set:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run cf:build` |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | `/` (repo root) |
+
+Use the same production environment variables as Vercel below, including `ENQUIRY_DATABASE_URL` and `ENQUIRY_DATA_KEY`. Cloudflare has no persistent local disk, so PostgreSQL is required for enquiry storage. Optional local check: `npm run cf:preview`.
 
 ## Vercel production settings
 

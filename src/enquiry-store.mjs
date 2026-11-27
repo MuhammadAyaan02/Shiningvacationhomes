@@ -11,7 +11,7 @@ export function storageIssues(env){
  const issues=[];
  if(!/^[a-fA-F0-9]{64}$/.test(env.ENQUIRY_DATA_KEY||''))issues.push('ENQUIRY_DATA_KEY must be a private 64-character hexadecimal encryption key.');
  if(env.ENQUIRY_DATABASE_URL){try{const url=new URL(env.ENQUIRY_DATABASE_URL);if(!['postgres:','postgresql:'].includes(url.protocol)||!url.hostname)throw Error();}catch{issues.push('ENQUIRY_DATABASE_URL must be a PostgreSQL connection URL.');}}
- else if(env.VERCEL||!env.ENQUIRY_STORAGE_DIR||!path.isAbsolute(env.ENQUIRY_STORAGE_DIR))issues.push('Configure ENQUIRY_DATABASE_URL, or an absolute persistent ENQUIRY_STORAGE_DIR on a Node server. Vercel requires PostgreSQL.');
+ else if(env.VERCEL||env.CF_PAGES||env.CLOUDFLARE_DEPLOYMENT_ID||!env.ENQUIRY_STORAGE_DIR||!path.isAbsolute(env.ENQUIRY_STORAGE_DIR))issues.push('Configure ENQUIRY_DATABASE_URL, or an absolute persistent ENQUIRY_STORAGE_DIR on a Node server. Vercel and Cloudflare require PostgreSQL.');
  return issues;
 }
 

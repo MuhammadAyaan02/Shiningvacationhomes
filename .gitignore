@@ -1,11 +1,15 @@
 node_modules/
 .next/
+.open-next/
 .vercel/
+.wrangler/
 *.log
 *.tsbuildinfo
 .env
 .env.*
 !.env.example
+.dev.vars
 .data/
 .DS_Store
 Thumbs.db
+._*
