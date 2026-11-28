@@ -12,7 +12,7 @@ export function enquiryEmail(data,{reference=''}={}){
  ]:[
   ['Type of stay',data.intent==='monthly'?'Monthly stay':'Short stay'],
   ['Travel plans',data.travelPlan],['Arrival',date(data.arrival)],['Departure',date(data.departure)],
-  ['Guests',data.guests],['Accommodation',collections.find(item=>item.slug===data.collection)?.name],
+  ['Room type',collections.find(item=>item.slug===data.collection)?.name||data.collection],['Guests',data.guests],
   ['Preferred area',data.preferredArea],
   ['Budget',data.budget?`${new Intl.NumberFormat('en-AE',{style:'currency',currency:'AED',maximumFractionDigits:2}).format(Number(data.budget))}${data.budgetBasis==='monthly'?' per month':' for the whole stay'}`:'']
  ];

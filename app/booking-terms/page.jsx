@@ -74,7 +74,7 @@ export default function Page(){
   <div className="privacy-layout wrap">
    <aside className="privacy-rail" aria-label="Booking information navigation">
     <PageContents items={sections.map(({id,title})=>({id,title}))}/>
-    <p className="privacy-rail-note">Something you would like to clarify?<br/><a className="privacy-inline-link" href="mailto:info@shiningvacationhomes.com?subject=Booking%20question">Ask the team <span aria-hidden="true">↗</span></a></p>
+    <p className="privacy-rail-note">Something you would like to clarify?<br/><a className="privacy-inline-link" href="mailto:info@shiningvacationhomes.com?subject=Booking%20question">Ask the team</a></p>
    </aside>
    <article className="prose privacy-content" aria-label="Enquiries and booking information in detail">
     {sections.map((section,index)=><section key={section.id} className="privacy-section" id={section.id} aria-labelledby={section.id+'-title'}>
@@ -86,7 +86,7 @@ export default function Page(){
   <section className="privacy-contact wrap" aria-labelledby="booking-contact-title">
    <div className="privacy-contact-inner">
     <div><p className="eyebrow">LET'S MAKE A PLAN</p><h2 id="booking-contact-title">A clearer next step<br/>for your Dubai stay.</h2><p>Share your requirements, or speak to the team before you do.</p></div>
-    <div className="privacy-contact-actions"><ContextLink className="button" href="/contact/">Share your requirements <span aria-hidden="true">↗</span></ContextLink><a className="text-link" href="mailto:info@shiningvacationhomes.com?subject=Booking%20question">Ask a booking question <span aria-hidden="true">↗</span></a></div>
+    <div className="privacy-contact-actions"><ContextLink className="button" href="/contact/">Share your requirements</ContextLink><a className="text-link" href="mailto:info@shiningvacationhomes.com?subject=Booking%20question">Ask a booking question</a></div>
    </div>
   </section>
  </div>;

@@ -10,7 +10,7 @@ for(const route of routes){
  const html=await response.text();
  for(const name of ['content-security-policy','x-content-type-options','strict-transport-security','x-frame-options'])if(!response.headers.has(name))issues.push(`${route}: missing ${name}`);
  const policy=response.headers.get('content-security-policy')||'',scripts=policy.split(';').find(rule=>rule.trim().startsWith('script-src '))||'';
- if(scripts.includes("'unsafe-inline'")||!scripts.includes("'sha256-"))issues.push(`${route}: expected hash-based script policy`);
+ if(scripts.includes("'unsafe-inline'")||!(scripts.includes("'nonce-")||scripts.includes("'sha256-")))issues.push(`${route}: expected nonce- or hash-based script policy`);
  if(!html.includes(`rel="canonical" href="${new URL(route,base).href}"`))issues.push(`${route}: canonical does not match the published origin`);
  if(/name="robots" content="[^"]*noindex/i.test(html))issues.push(`${route}: noindex is present`);
  if((html.match(/<h1(?: |>)/g)||[]).length!==1)issues.push(`${route}: expected one H1`);

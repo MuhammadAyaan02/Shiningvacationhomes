@@ -1,9 +1,10 @@
 import {collections} from './data.mjs';
 import {createHash} from 'node:crypto';
-import {deliveryIssues,deliveryProvider,sendGmailEnquiry} from './enquiry-delivery.mjs';
+import {deliveryIssues,deliveryProvider,isSmtpProvider,sendBrevoEnquiry,sendSmtpEnquiry} from './enquiry-delivery.mjs';
 import {enquiryEmail} from './enquiry-email.mjs';
 
 import {isEmailAddress} from './email-address.mjs';
+import {verifyTurnstileToken} from './turnstile.mjs';
 // shortcut: per-process limits reset on restart; use shared host protection before public promotion.
 const limits=new Map();
 // shortcut: SMTP retry deduplication is per process for 15 minutes; use shared storage across server instances.
@@ -22,7 +23,8 @@ export function validateEnquiry(input,today=todayDubai()){
  if(!['guest','monthly','owner'].includes(data.intent))errors.intent='Choose an enquiry type.';
  if(!data.name||/[\r\n\u0000-\u001f]/.test(data.name))errors.name='Enter your full name on one line.';
  if(!isEmailAddress(data.email))errors.email='Enter a valid email address.';
- if(data.phone&&!/^[+\d\s().-]{5,40}$/.test(data.phone))errors.phone='Enter a valid telephone number.';
+ if(!data.phone)errors.phone='Enter your phone number.';
+ else if(!/^[+\d\s().-]{5,40}$/.test(data.phone))errors.phone='Enter a valid telephone number.';
  if(data.companyWebsite)errors.form='Unable to accept this enquiry.';
  if(data.intent==='owner'){
   if(!['Studio','1','2','3','4','5','6'].includes(data.bedrooms))errors.bedrooms='Choose the number of bedrooms.';
@@ -30,15 +32,16 @@ export function validateEnquiry(input,today=todayDubai()){
  }else{
   if(data.collection&&!collections.some(c=>c.slug===data.collection))errors.collection='Choose a listed accommodation style.';
   if(data.guests&&!/^(?:[1-9]|1[0-2])$/.test(data.guests))errors.guests='Choose between 1 and 12 guests, or Not sure yet.';
-  if(!data.arrival&&!data.travelPlan)errors.travelPlan='Tell us your approximate dates or duration, or add an exact arrival date.';
   if(data.budget){
    if(!/^\d+(?:\.\d{1,2})?$/.test(data.budget)||Number(data.budget)<1||Number(data.budget)>100000000)errors.budget='Enter a budget between AED 1 and AED 100,000,000, with up to two decimal places.';
    if(!['total','monthly'].includes(data.budgetBasis))errors.budgetBasis='Choose whether the budget is for the whole stay or each month.';
   }else delete data.budgetBasis;
-  for(const key of ['arrival','departure'])if(data[key]&&!dateValid(data[key]))errors[key]='Enter a valid date.';
-  if(data.arrival&&data.arrival<today)errors.arrival='Choose today or a future date.';
-  if(data.departure&&!data.arrival)errors.arrival='Choose a check-in date first.';
-  if(data.arrival&&data.departure&&data.departure<=data.arrival)errors.departure='Check-out must be after check-in.';
+  if(!data.arrival)errors.arrival='Choose a check-in date.';
+  else if(!dateValid(data.arrival))errors.arrival='Enter a valid date.';
+  else if(data.arrival<today)errors.arrival='Choose today or a future date.';
+  if(!data.departure)errors.departure='Choose a check-out date.';
+  else if(!dateValid(data.departure))errors.departure='Enter a valid date.';
+  else if(data.arrival&&data.departure<=data.arrival)errors.departure='Check-out must be after check-in.';
   delete data.area;delete data.bedrooms;
  }
  delete data.companyWebsite;
@@ -76,6 +79,10 @@ export async function readEnquiryRequest(request,env={},dependencies={}){
  if(request.headers.get('content-type')?.split(';')[0].trim().toLowerCase()!=='application/json')return response(415,{message:'Use JSON.'});
  if(Number(request.headers.get('content-length'))>maxBodyBytes)return response(413,{message:'The enquiry is too large. Please shorten it and try again.'});
  let input;try{input=await readBody(request)}catch(error){return response(error.message==='timeout'?408:error.message==='large'?413:400,{message:error.message==='timeout'?'The submission took too long. Please try again.':'The enquiry could not be read. Please check its size and try again.'})}
+ const turnstileToken=typeof input?.turnstileToken==='string'?input.turnstileToken:typeof input?.['cf-turnstile-response']==='string'?input['cf-turnstile-response']:'';
+ if(input&&typeof input==='object'){delete input.turnstileToken;delete input['cf-turnstile-response'];}
+ const challenge=await verifyTurnstileToken(turnstileToken,request,env,dependencies);
+ if(!challenge.ok)return response(challenge.status,{message:challenge.message,...(challenge.errors?{errors:challenge.errors}:{})});
  const {data,errors}=validateEnquiry(input,dependencies.today);
  if(Object.keys(errors).length)return response(422,{message:'Please check the highlighted fields.',errors});
  const requestId=request.headers.get('idempotency-key')||'';
@@ -88,7 +95,7 @@ export async function handleEnquiry(request,env={},dependencies={}){
  if(parsed instanceof Response)return parsed;
  const {data,requestId}=parsed;
  if(deliveryIssues(env).length)return response(503,{message:'Online enquiries are not configured yet. Please call or email the team. Your enquiry has not been sent.'});
- const smtp=deliveryProvider(env)==='gmail',requests=dependencies.smtpRequests||smtpRequests;
+ const smtp=isSmtpProvider(env),requests=dependencies.smtpRequests||smtpRequests;
  const requestKey=`${data.email.toLowerCase()}:${requestId}`,fingerprint=createHash('sha256').update(JSON.stringify(data)).digest('hex');
  if(smtp){
   for(const [key,value] of requests)if(Date.now()-value.start>900000)requests.delete(key);
@@ -106,8 +113,11 @@ export async function handleEnquiry(request,env={},dependencies={}){
  const deliver=async()=>{try{
   const subject=`Shining Vacation Homes - ${data.intent==='owner'?'Property management':data.intent==='monthly'?'Monthly stay':'Stay'} enquiry`;
   let reference;
-  if(smtp)reference=await sendGmailEnquiry(env,{replyTo:data.email,subject,text,html,requestId},dependencies.createTransport);
-  else{
+  if(smtp)reference=await sendSmtpEnquiry(env,{replyTo:data.email,subject,text,html,requestId},dependencies.createTransport);
+  else if(deliveryProvider(env)==='brevo'){
+   try{reference=await sendBrevoEnquiry(env,{replyTo:data.email,subject,text,html,requestId},dependencies);}
+   catch(error){return response(error.status===429?429:502,{message:'The email service could not accept your enquiry. Please retry or contact the team directly.'});}
+  }else{
   const result=await (dependencies.fetch||fetch)('https://api.resend.com/emails',{
    method:'POST',signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`enquiry-${requestId}`},
    body:JSON.stringify({from:env.ENQUIRY_FROM,to:env.ENQUIRY_TO.split(',').map(v=>v.trim()).filter(Boolean),reply_to:data.email,subject,text,html})

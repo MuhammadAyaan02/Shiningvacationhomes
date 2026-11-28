@@ -90,7 +90,7 @@ export default function Page(){
   <div className="privacy-layout wrap">
    <aside className="privacy-rail" aria-label="Privacy information navigation">
     <PrivacyContents items={sections.map(({id,title})=>({id,title}))}/>
-    <p className="privacy-rail-note">A question before you share?<br/><a className="privacy-inline-link" href="mailto:info@shiningvacationhomes.com?subject=Privacy%20question">Email the team <span aria-hidden="true">↗</span></a></p>
+    <p className="privacy-rail-note">A question before you share?<br/><a className="privacy-inline-link" href="mailto:info@shiningvacationhomes.com?subject=Privacy%20question">Email the team</a></p>
    </aside>
    <article className="prose privacy-content" aria-label="Privacy information in detail">
     {sections.map((section,index)=><section key={section.id} className="privacy-section" id={section.id} aria-labelledby={section.id+'-title'}>
@@ -103,7 +103,7 @@ export default function Page(){
   <section className="privacy-contact wrap" aria-labelledby="privacy-contact-title">
    <div className="privacy-contact-inner">
     <div><p className="eyebrow">LET’S KEEP THINGS CLEAR</p><h2 id="privacy-contact-title">Questions about<br/>your information?</h2><p>You can speak to the team before sharing your plans.</p></div>
-    <div className="privacy-contact-actions"><a className="button" href="mailto:info@shiningvacationhomes.com?subject=Privacy%20question">Email us about privacy <span aria-hidden="true">↗</span></a><ContextLink className="text-link" href="/contact/">Other ways to contact us <span aria-hidden="true">↗</span></ContextLink></div>
+    <div className="privacy-contact-actions"><a className="button" href="mailto:info@shiningvacationhomes.com?subject=Privacy%20question">Email us about privacy</a><ContextLink className="text-link" href="/contact/">Other ways to contact us</ContextLink></div>
    </div>
   </section>
  </div>;

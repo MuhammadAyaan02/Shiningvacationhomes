@@ -1,8 +1,6 @@
 'use client';
 import {createContext,useContext,useEffect,useLayoutEffect,useRef,useState,useCallback,Suspense} from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-const PhotoDialog=dynamic(()=>import('./photo-dialog.jsx'),{ssr:false});
 import {usePathname,useSearchParams} from 'next/navigation';
 import {collections,faqs,media} from '../src/data.mjs';
 import {chapters} from '../src/chapter-data.mjs';
@@ -11,7 +9,6 @@ import {staySummary} from '../src/experience.js';
 
 const SiteContext=createContext(null);
 const keys=['arrival','departure','guests'];
-import {navigation as nav} from '../src/navigation.mjs';
 const easing='cubic-bezier(.22,1,.36,1)';
 const photoSrc=p=>['studio-600x336.jpg','1BR-600x336.jpg','2BR-600x336.jpg','4BR-600x336.jpg','villa-600x336.jpg'].includes(p.image.split('/').at(-1))?'/media/'+p.image.split('/').at(-1):media+p.image;
 const animate=(element,frames,duration=600)=>element?.animate?.(frames,{duration,easing});
@@ -33,11 +30,8 @@ export function EnquirySidebar({children}){
 }
 export function SiteProvider({children}){
  const [plan,setPlan]=useState({arrival:'',departure:'',guests:'1'});
- const [query,setQuery]=useState({});const [photo,setPhoto]=useState(null);
- const opener=useRef(null);
- const path=usePathname();
+ const [query,setQuery]=useState({});
  const sync=useCallback(search=>{const q=Object.fromEntries(new URLSearchParams(search));setQuery(q);setPlan({arrival:/^\d{4}-\d{2}-\d{2}$/.test(q.arrival||'')?q.arrival:'',departure:/^\d{4}-\d{2}-\d{2}$/.test(q.departure||'')?q.departure:'',guests:/^(?:[1-9]|1[0-2])$/.test(q.guests||'')?q.guests:'1'});},[]);
- useEffect(()=>{setPhoto(null)},[path]);
  useEffect(()=>{const legacy={about_us:'/about/',property_management:'/property-management/'};if(location.pathname==='/'&&legacy[location.hash.slice(1)])location.replace(legacy[location.hash.slice(1)]);},[]);
  const href=path=>{
   if(!/^\/(?:stays|contact|monthly-stays)\//.test(path))return path;
@@ -45,17 +39,12 @@ export function SiteProvider({children}){
   keys.forEach(key=>{if(plan[key]&&(key!=='guests'||plan[key]!=='1'))url.searchParams.set(key,plan[key]);});
   return url.pathname+url.search+url.hash;
  };
- const openPhoto=(slug,button)=>{opener.current=button;setPhoto(Math.max(0,collections.findIndex(p=>p.slug===slug)));};
- return <SiteContext.Provider value={{plan,setPlan,query,href,openPhoto}}><Suspense fallback={null}><PlanSync onNavigate={sync}/></Suspense>{children}{photo!==null&&<PhotoDialog index={photo} setIndex={setPhoto} opener={opener} href={href}/>}</SiteContext.Provider>;
+ return <SiteContext.Provider value={{plan,setPlan,query,href}}><Suspense fallback={null}><PlanSync onNavigate={sync}/></Suspense>{children}</SiteContext.Provider>;
 }
 function PlanSync({onNavigate}){const path=usePathname(),params=useSearchParams(),search=params.toString();useEffect(()=>onNavigate(search),[path,search,onNavigate]);return null}
 export function ContextLink({href,...props}){const site=useSite(),target=site.href(href);return target.startsWith('/')&&!target.startsWith('//')?<Link href={target} {...props}/>:<a href={target} {...props}/>}
 export function Header(){
- const path=usePathname();const [open,setOpen]=useState(false),[mobile,setMobile]=useState(false);const menu=useRef(null),header=useRef(null);
- useEffect(()=>{const breakpoint=matchMedia('(max-width:900px)');setMobile(breakpoint.matches);const change=()=>{setMobile(breakpoint.matches);setOpen(false);};breakpoint.addEventListener('change',change);return()=>breakpoint.removeEventListener('change',change);},[]);
- useEffect(()=>{if(!open)return;const outside=e=>{if(!header.current?.contains(e.target))setOpen(false);};document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);},[open]);
- useEffect(()=>{const escape=e=>{if(e.key==='Escape'&&open){setOpen(false);menu.current?.focus();}};document.addEventListener('keydown',escape);return()=>document.removeEventListener('keydown',escape);},[open]);
- return <header ref={header} className="header wrap"><ContextLink className="brand" href="/" aria-label="Shining Vacation Homes home"><img src="/media/shining_logo_ink.svg" alt="Shining Vacation Homes" width="196" height="42"/></ContextLink><button ref={menu} className="menu-toggle" aria-label={open?'Close menu':'Open menu'} aria-expanded={open} aria-controls="main-nav" onClick={()=>setOpen(value=>!value)}><span className="menu-label">{open?'Close':'Menu'}</span><span className="menu-icon" aria-hidden="true"/></button><nav id="main-nav" className={open?'open':''} aria-label="Main navigation" aria-hidden={mobile?!open:undefined} inert={mobile&&!open} onClick={e=>{if(e.target.closest('a'))setOpen(false);}}>{nav.map(([url,label])=><ContextLink key={url} href={url} aria-current={path===url||path===url.slice(0,-1)?'page':undefined}>{label}</ContextLink>)}<ContextLink className="mobile-stay" href="/contact/">Plan your stay <span aria-hidden="true">↗</span></ContextLink></nav><ContextLink className="header-contact" href="/contact/">Plan your stay <span aria-hidden="true">↗</span></ContextLink></header>;
+ return <header className="header wrap"><ContextLink className="brand" href="/" aria-label="Shining Vacation Homes home"><img src="/media/shining_logo_ink.svg" alt="Shining Vacation Homes" width="196" height="42"/></ContextLink><ContextLink className="header-contact" href="#plan-your-stay">Plan your stay</ContextLink></header>;
 }
 export function StayContext(){const {plan}=useSite();return <div className="context-summary">{plan.arrival||plan.departure?staySummary(plan.arrival,plan.departure,plan.guests):'Share your dates, guests and preferences. We will discuss suitable available options with you.'}</div>}
 export function Faq(){
@@ -66,10 +55,9 @@ export function Faq(){
 export function ChapterStory(){
  const [active,setActive]=useState(0);const tabs=useRef([]),photo=useRef(null),panel=useRef(null);
  const choose=(i,focus=false)=>{if(i===active)return;setActive(i);if(focus)tabs.current[i]?.focus();animate(photo.current,[{opacity:.25,transform:'scale(1.045)'},{opacity:1,transform:'scale(1)'}]);animate(panel.current,[{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'translateY(0)'}],420);};
- return <div className="chapter-story"><figure className="chapter-photo chapter-reveal"><CollectionImage ref={photo} src={'/media/'+chapters[active].image.split('/').at(-1)} alt={chapters[active].alt} width="900" height="650" loading="lazy"/><span className="chapter-photo-number" aria-hidden="true">0{active+1} <span>/ 03</span></span><figcaption>Example accommodation photograph</figcaption></figure><div className="chapter-story-content"><div className="chapter-tabs" style={{'--chapter-index':active}} role="tablist" aria-label="Choose your Dubai chapter">{chapters.map((c,i)=><button key={c.id} ref={el=>{tabs.current[i]=el}} type="button" role="tab" id={'chapter-tab-'+c.id} aria-controls={'chapter-panel-'+c.id} aria-selected={active===i} tabIndex={active===i?0:-1} onClick={()=>choose(i)} onKeyDown={e=>{const next=e.key==='ArrowRight'?(i+1)%3:e.key==='ArrowLeft'?(i+2)%3:e.key==='Home'?0:e.key==='End'?2:null;if(next!==null){e.preventDefault();choose(next,true);}}}><span className="chapter-tab-number" aria-hidden="true">0{i+1}</span><span className="chapter-tab-label">{c.label}</span></button>)}</div><div ref={panel} className="chapter-panels chapter-reveal">{chapters.map((c,i)=><div key={c.id} role="tabpanel" id={'chapter-panel-'+c.id} aria-labelledby={'chapter-tab-'+c.id} tabIndex={0} hidden={active!==i} aria-hidden={active!==i} inert={active!==i}><p className="eyebrow">YOUR DUBAI, YOUR WAY</p><h3>{c.title.split('\n').map((line,j)=><span key={line}>{j>0&&<br/>}{line}</span>)}</h3><p>{c.body}</p><p className="chapter-prompt">{c.prompt}</p><ContextLink className="text-link chapter-action" href={c.href}>{c.cta} <span aria-hidden="true">↗</span></ContextLink></div>)}</div></div></div>;
+ return <div className="chapter-story"><figure className="chapter-photo chapter-reveal"><CollectionImage ref={photo} src={'/media/'+chapters[active].image.split('/').at(-1)} alt={chapters[active].alt} width="900" height="650" loading="lazy"/><span className="chapter-photo-number" aria-hidden="true">0{active+1} <span>/ 03</span></span><figcaption>Example accommodation photograph</figcaption></figure><div className="chapter-story-content"><div className="chapter-tabs" style={{'--chapter-index':active}} role="tablist" aria-label="Choose your Dubai chapter">{chapters.map((c,i)=><button key={c.id} ref={el=>{tabs.current[i]=el}} type="button" role="tab" id={'chapter-tab-'+c.id} aria-controls={'chapter-panel-'+c.id} aria-selected={active===i} tabIndex={active===i?0:-1} onClick={()=>choose(i)} onKeyDown={e=>{const next=e.key==='ArrowRight'?(i+1)%3:e.key==='ArrowLeft'?(i+2)%3:e.key==='Home'?0:e.key==='End'?2:null;if(next!==null){e.preventDefault();choose(next,true);}}}><span className="chapter-tab-number" aria-hidden="true">0{i+1}</span><span className="chapter-tab-label">{c.label}</span></button>)}</div><div ref={panel} className="chapter-panels chapter-reveal">{chapters.map((c,i)=><div key={c.id} role="tabpanel" id={'chapter-panel-'+c.id} aria-labelledby={'chapter-tab-'+c.id} tabIndex={0} hidden={active!==i} aria-hidden={active!==i} inert={active!==i}><p className="eyebrow">YOUR DUBAI, YOUR WAY</p><h3>{c.title.split('\n').map((line,j)=><span key={line}>{j>0&&<br/>}{line}</span>)}</h3><p>{c.body}</p><ContextLink className="button chapter-action" href={c.href}>{c.cta}</ContextLink></div>)}</div></div></div>;
 }
-export function PhotoButton({slug,label='View example photos'}){const {openPhoto}=useSite();return <button className="quick-view" type="button" aria-haspopup="dialog" aria-label={label+' — '+(collections.find(p=>p.slug===slug)?.name||'Dubai collection')} onClick={e=>openPhoto(slug,e.currentTarget)}>{label} ↗</button>}
-export function CollectionCard({slug,featured=false}){const p=collections.find(p=>p.slug===slug);return <article className={'stay-tile'+(featured?' feature':'')}><ContextLink className={'stay-card'+(featured?' feature':'')} href={'/contact/?collection='+p.slug}><div className="card-image"><CollectionImage sizes={featured?'(max-width:1000px) 100vw, 55vw':'(max-width:600px) 100vw, (max-width:1000px) 50vw, 33vw'} src={photoSrc(p)} alt={'Illustrative '+p.name.toLowerCase()+' accommodation photograph'} width="900" height="650" loading="lazy"/><span className="image-tag">Example photograph</span><span className="round-arrow" aria-hidden="true">↗</span></div><div className="card-copy"><span className="eyebrow">ACCOMMODATION STYLE</span><h3>{p.name}</h3><p>{p.short}</p><span className="card-bottom">Enquire about this option <span aria-hidden="true">↗</span></span></div></ContextLink><ContextLink className="stay-guide" href={'/stays/'+p.slug+'/'}>Explore {p.name.toLowerCase()} in Dubai <span aria-hidden="true">↗</span></ContextLink><PhotoButton slug={slug} label="View example"/></article>}
+export function CollectionCard({slug,featured=false}){const p=collections.find(p=>p.slug===slug);return <article className={'stay-tile'+(featured?' feature':'')}><ContextLink className={'stay-card'+(featured?' feature':'')} href="#plan-your-stay"><div className="card-image"><CollectionImage sizes={featured?'(max-width:1000px) 100vw, 55vw':'(max-width:600px) 100vw, (max-width:1000px) 50vw, 33vw'} src={photoSrc(p)} alt={'Illustrative '+p.name.toLowerCase()+' accommodation photograph'} width="900" height="650" loading="lazy"/></div><div className="card-copy"><span className="eyebrow">ACCOMMODATION STYLE</span><h3>{p.name}</h3><p>{p.short}</p><span className="card-bottom">Enquire about this option</span></div></ContextLink></article>}
 export function AccommodationStyles(){return <><h2 className="visually-hidden">Accommodation styles</h2><div className="cards accommodation-styles" aria-label="Accommodation styles">{collections.map(p=><CollectionCard key={p.slug} slug={p.slug}/>)}</div></>}
 export function Motion(){
  const path=usePathname();

@@ -34,14 +34,17 @@ Set these values directly in the project's Production environment settings:
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | Approved public HTTPS origin |
 | `ENQUIRY_ORIGIN` | The same origin, without a trailing slash |
-| `ENQUIRY_PROVIDER` | `gmail` for the Gmail setup |
-| `SMTP_USER` | Sending Google account |
-| `SMTP_APP_PASSWORD` | Its Google App Password |
-| `ENQUIRY_TO` | Recipient inbox; optional for Gmail, which otherwise uses SMTP_USER |
+| `ENQUIRY_PROVIDER` | `brevo` (HTTP API; works on Cloudflare Workers). Also `gmail` / `resend` |
+| `BREVO_API_KEY` | Brevo API key (`xkeysib-…`). SMTP keys (`xsmtpsib-…`) will not work |
+| `ENQUIRY_FROM` | Verified Brevo sender (e.g. `info@shiningvacationhomes.com`) |
+| `ENQUIRY_TO` | Primary inbox for enquiries |
+| `ENQUIRY_BCC` | Optional BCC recipients |
 | `ENQUIRY_DATABASE_URL` | Managed PostgreSQL connection URL |
 | `ENQUIRY_DATA_KEY` | Stable private 64-character hexadecimal encryption key |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (public) |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key (server-only) |
 
-Vercel uses `npm run check:release && npm run build:next`. Keep its output directory at the Next.js default. Missing production settings intentionally block release. Without `ENQUIRY_PROVIDER=gmail`, the supported legacy default checks for Resend settings instead; see `.env.example` for that alternative.
+Vercel uses `npm run check:release && npm run build:next`. Keep its output directory at the Next.js default. Missing production settings intentionally block release.
 
 Always use `npm run build:next` for a plain Next.js output: it validates the prerendered files and generates the script-hash security policy. Use `npm run build` when you need the Cloudflare worker bundle. For a conventional Node host, run `npm start` behind HTTPS with persistent storage configured.
 
